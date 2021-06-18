@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Build
+
+  test:
+    env:
+      ENVIRONMENT: test
+
+    runs-on: ubuntu-latest
+    name: Test
+    environment: test_environment
+    if: ${{ github.ref == 'refs/heads/main' }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy test environment
+        uses: azure/CLI@v1
+        with:
+          azcliversion: 2.24.2
+          inlineScript: |
+            az account show
+            date=$(date +"%Y%m%d%H%M")
+            az deployment sub create \
+              --name "$ENVIRONMENT-${date}" \
+              --location $LOCATION \
+              --template-file bicep/main.bicep \
+              --parameters location="$LOCATION" environment="$ENVIRONMENT"
+
+  release:
+    env:
+      ENVIRONMENT: prod
+
+    runs-on: ubuntu-latest
+    name: Release
+    environment: prod_environment
+    if: ${{ github.ref == 'refs/heads/main' }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy test environment
+        uses: azure/CLI@v1
+        with:
+          azcliversion: 2.24.2
+          inlineScript: |
+            az account show
+            date=$(date +"%Y%m%d%H%M")
+            az deployment sub create \
+              --name "$ENVIRONMENT-${date}" \
+              --location $LOCATION \
+              --template-file bicep/main.bicep \
+              --parameters location="$LOCATION" environment="$ENVIRONMENT"
